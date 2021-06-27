@@ -20,7 +20,110 @@ constexpr bool _is_iterator_v_array<_Ty, void_tt<_iter_cat_t<_Ty>>> = true;
 
 
 namespace Py {
-	// ================================================= Array Class: ======================================================= 
+// ================================================= Array Class Iterators: ======================================================= 
+
+	// Random Access Iterator
+	template<typename T>
+	class _Array_Iterator_ {
+	public:
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = T;
+		using difference_type = std::ptrdiff_t;
+		using pointer = T*;
+		using reference = T&;
+
+	protected:
+		pointer _iter_;
+
+	public:
+		_Array_Iterator_(pointer ptr) { 
+			_iter_ = ptr;
+		}
+
+		_Array_Iterator_(const _Array_Iterator_<T>& rawIterator) {
+			this->_iter_ = rawIterator._iter_;
+		}
+		
+		_Array_Iterator_<T>& operator=(const _Array_Iterator_<T>& rawIterator) {
+			this->_iter_ = rawIterator._iter_;
+			return *this;
+		}
+
+		_Array_Iterator_<T>& operator=(pointer ptr) {
+			_iter_ = ptr; 
+			return *this; 
+		}
+
+		operator bool() const {
+			if (_iter_) return true;
+			else return false;
+		}
+
+		bool operator==(const _Array_Iterator_<T>& rawIterator) const { return (_iter_ == rawIterator.getConstPtr()); }
+		bool operator!=(const _Array_Iterator_<T>& rawIterator) const { return (_iter_ != rawIterator.getConstPtr()); }
+
+		_Array_Iterator_<T>& operator+=(const difference_type& movement) { _iter_ += movement; return (*this); }
+		_Array_Iterator_<T>& operator-=(const difference_type& movement) { _iter_ -= movement; return (*this); }
+		_Array_Iterator_<T>& operator++() { ++_iter_; return (*this); }
+		_Array_Iterator_<T>& operator--() { --_iter_; return (*this); }
+
+		_Array_Iterator_<T> operator++(int) { auto temp(*this); ++_iter_; return temp; }
+		_Array_Iterator_<T> operator--(int) { auto temp(*this); --_iter_; return temp; }
+		_Array_Iterator_<T> operator+(const difference_type& movement) { auto oldPtr = _iter_; _iter_ += movement; auto temp(*this); _iter_ = oldPtr; return temp; }
+		_Array_Iterator_<T> operator-(const difference_type& movement) { auto oldPtr = _iter_; _iter_ -= movement; auto temp(*this); _iter_ = oldPtr; return temp; }
+
+		difference_type operator-(const _Array_Iterator_<T>& rawIterator) { return std::distance(rawIterator.getPtr(), this->getPtr()); }
+
+		T& operator*() { return *_iter_; }
+		const T& operator*() const { return *_iter_; }
+		T* operator->() { return _iter_; }
+
+		T* getPtr()const { return _iter_; }
+		const T* getConstPtr() const { return _iter_; }
+
+		~_Array_Iterator_() { _iter_ = nullptr; }
+	};
+
+	// Random Access Reverse Iterator
+	template<typename T>
+	class _Array_Reverse_Iterator_ : public _Array_Iterator_<T> {
+	public:
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = T;
+		using difference_type = std::ptrdiff_t;
+		using pointer = T*;
+		using reference = T&;
+
+		_Array_Reverse_Iterator_(T* ptr) : _Array_Iterator_<T>(ptr) {}
+
+		_Array_Reverse_Iterator_(const _Array_Iterator_<T>& rawIterator) {
+			this->_iter_ = rawIterator._iter_;
+		}
+
+		_Array_Reverse_Iterator_(const _Array_Reverse_Iterator_<T>& rawReverseIterator) {
+			this->_iter_ = rawReverseIterator._iter_;
+		}
+		
+		_Array_Reverse_Iterator_<T>& operator=(const _Array_Reverse_Iterator_<T>& rawReverseIterator) = default;
+		_Array_Reverse_Iterator_<T>& operator=(const _Array_Iterator_<T>& rawIterator) { this->_iter_ = rawIterator.getPtr(); return (*this); }
+		_Array_Reverse_Iterator_<T>& operator=(T* ptr) { this->setPtr(ptr); return (*this); }
+
+		_Array_Reverse_Iterator_<T>& operator+=(const difference_type& movement) { this->_iter_ -= movement; return (*this); }
+		_Array_Reverse_Iterator_<T>& operator-=(const difference_type& movement) { this->_iter_ += movement; return (*this); }
+		_Array_Reverse_Iterator_<T>& operator++() { --this->_iter_; return (*this); }
+		_Array_Reverse_Iterator_<T>& operator--() { ++this->_iter_; return (*this); }
+		
+		_Array_Reverse_Iterator_<T> operator++(int) { auto temp(*this); --this->_iter_; return temp; }
+		_Array_Reverse_Iterator_<T> operator--(int) { auto temp(*this); ++this->_iter_; return temp; }
+		_Array_Reverse_Iterator_<T> operator+(const int& movement) { auto oldPtr = this->_iter_; this->_iter_ -= movement; auto temp(*this); this->_iter_ = oldPtr; return temp; }
+		_Array_Reverse_Iterator_<T> operator-(const int& movement) { auto oldPtr = this->_iter_; this->_iter_ += movement; auto temp(*this); this->_iter_ = oldPtr; return temp; }
+
+		difference_type operator-(const _Array_Reverse_Iterator_<T>& rawReverseIterator) { return std::distance(this->getPtr(), rawReverseIterator.getPtr()); }
+
+		~_Array_Reverse_Iterator_() {}
+	};
+
+// ================================================= Array Class: ======================================================= 
 	constexpr int MAX_ARRAY_CAPACITY = INT32_MAX;
 	constexpr int EXTRA_RESERVE = 10;
 	/*
@@ -115,6 +218,11 @@ namespace Py {
 
 	public:
 		const char* name = "none";
+
+		using iterator = _Array_Iterator_<T>;
+		using const_iterator = _Array_Iterator_<const T>;
+		using reverse_iterator = _Array_Reverse_Iterator_<T>;
+		using const_reverse_iterator = _Array_Reverse_Iterator_<const T>;
 
 	private:
 		// this helps in determining whether a Array<char> was intended to behave like a string
@@ -483,7 +591,7 @@ namespace Py {
 		}
 
 		// Compares Visible Size and All the values
-		bool operator== (Array<T>& arr) {
+		bool operator== (const Array<T>& arr) {
 			if (this->visible_size != arr.visible_size) {
 				return false;
 			}
@@ -547,13 +655,39 @@ namespace Py {
 		}
 
 		// return the address of first element
-		T* begin() const {
+		T* begin() {
 			return &(this->values[0]);
 		}
 
 		// return the address of last element
-		T* end() const {
+		T* end() {
 			return &this->values[visible_size];
+		}
+
+		T* cbegin() {
+			return &(this->values[0]);
+		}
+
+		T* cend() {
+			return &this->values[visible_size];
+		}
+
+		// for reverse iterator support
+
+		T* rbegin() {
+			return &this->values[visible_size - 1];
+		}
+
+		T* rend() {
+			return &this->values[- 1];
+		}
+
+		T* crbegin() {
+			return &this->values[visible_size - 1];
+		}
+
+		T* crend() {
+			return &this->values[-1];
 		}
 
 			///////////////////////////////////////
@@ -914,8 +1048,9 @@ namespace Py {
 			else if (this->is_sorted_descend()) {
 				this->reverse();
 			}
+
+#ifdef _ALGORITHM_
 			else if (this->visible_size >= 200) {
-#ifdef _ALGORITHM_	
 				/* 
 				since algorithm library is being included and compiled here just for std::sort, this manuever 
 				is done to exclude it in small projects, that dont require large sized arrays 
@@ -930,8 +1065,9 @@ namespace Py {
 				std::sort(this->begin(), this->end());
 
 			}
-			else {
 #endif
+			else {
+
 				// insertion sort
 				for (size_t i = 1; i != this->visible_size; i++) {
 					this->_place_sorted(this->values[i], i);
