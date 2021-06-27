@@ -96,13 +96,11 @@ namespace Py {
 
 		_Array_Reverse_Iterator_(T* ptr) : _Array_Iterator_<T>(ptr) {}
 
-		_Array_Reverse_Iterator_(const _Array_Iterator_<T>& rawIterator) {
-			this->_iter_ = rawIterator._iter_;
+		_Array_Reverse_Iterator_(const _Array_Iterator_<T>& rawIterator) { 
+			this->_iter_ = rawIterator._iter_; 
 		}
 
-		_Array_Reverse_Iterator_(const _Array_Reverse_Iterator_<T>& rawReverseIterator) {
-			this->_iter_ = rawReverseIterator._iter_;
-		}
+		_Array_Reverse_Iterator_(const _Array_Reverse_Iterator_<T>& rawReverseIterator) = default;
 		
 		_Array_Reverse_Iterator_<T>& operator=(const _Array_Reverse_Iterator_<T>& rawReverseIterator) = default;
 		_Array_Reverse_Iterator_<T>& operator=(const _Array_Iterator_<T>& rawIterator) { this->_iter_ = rawIterator.getPtr(); return (*this); }
