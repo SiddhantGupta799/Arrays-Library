@@ -46,6 +46,13 @@ Operators Supported:
 				> Uses std::lexicographical_compare
 		- operator() 	: it takes a function as a parameter and maps the function to all the array elements
 
+Iterators Supported:
+
+		- iterator			: random access iterator
+		- const_iterator 		: const random access iterator
+		- reverse_iterator		: random access reverse iterator
+		- const_reverse_iterator	: const random access reverse iterator
+
 Other memory Manipulation functions Supported:
 
 		- resize()
